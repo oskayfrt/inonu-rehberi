@@ -27,6 +27,7 @@ export function Share() {
     course: '',
   });
   const userDepartmentLabel = user?.department || 'Bölüm bilgisi bulunamadı';
+  const requiresCourseName = formData.category === 'course-tip' || formData.category === 'elective-review';
 
   const loadMyPosts = () => {
     if (!user?.id || user.role === 'admin') return;
@@ -81,6 +82,11 @@ export function Share() {
       return;
     }
 
+    if (requiresCourseName && !formData.course.trim()) {
+      setError('Ders tavsiyesi veya seçmeli ders yorumu için ders adı zorunludur.');
+      return;
+    }
+
     try {
       await api.createPost({
         userId: user.id,
@@ -88,6 +94,7 @@ export function Share() {
         category: formData.category,
         title: formData.title,
         content: formData.description,
+        courseName: formData.course.trim() || undefined,
       });
 
       setSubmitStatus('success');
@@ -169,7 +176,7 @@ export function Share() {
             </p>
           </div>
 
-          {(formData.category === 'course-tip' || formData.category === 'elective-review') && (
+          {requiresCourseName && (
             <div>
               <label className="block text-sm mb-2">Ders Adı</label>
               <input
@@ -178,6 +185,7 @@ export function Share() {
                 onChange={(event) => setFormData({ ...formData, course: event.target.value })}
                 className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1e3a8a]"
                 placeholder="Örn: Veri Yapıları ve Algoritmalar"
+                required
               />
             </div>
           )}
@@ -208,7 +216,7 @@ export function Share() {
           <div className="flex gap-3 pt-4">
             <button
               type="submit"
-              disabled={!formData.category || !user?.departmentId || !formData.title || !formData.description}
+              disabled={!formData.category || !user?.departmentId || !formData.title || !formData.description || (requiresCourseName && !formData.course.trim())}
               className="flex-1 bg-[#1e3a8a] text-white py-3 rounded-lg hover:bg-[#1e40af] transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="w-5 h-5" />
