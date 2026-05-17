@@ -39,6 +39,14 @@ function getCategoryVisual(category: string) {
   return categoryVisuals[category] || categoryVisuals['course-tip'];
 }
 
+function isCoursePost(post: ApiPost) {
+  return post.category === 'course-tip' || post.category === 'elective-review';
+}
+
+function getDisplayTitle(post: ApiPost) {
+  return isCoursePost(post) && post.courseName ? post.courseName : post.title;
+}
+
 export function Department() {
   const navigate = useNavigate();
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -146,6 +154,8 @@ export function Department() {
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {posts.map((post) => {
               const visual = getCategoryVisual(post.category);
+              const displayTitle = getDisplayTitle(post);
+              const shouldShowSubtitle = displayTitle !== post.title;
 
               return (
               <article
@@ -160,7 +170,10 @@ export function Department() {
                   <span className="inline-flex rounded-full bg-white/18 px-3 py-1 text-sm backdrop-blur">
                     {categoryLabels[post.category] || post.category}
                   </span>
-                  <h3 className="relative mt-5 line-clamp-2 pr-10 text-xl leading-snug">{post.title}</h3>
+                  <h3 className="relative mt-5 line-clamp-2 pr-10 text-xl leading-snug">{displayTitle}</h3>
+                  {shouldShowSubtitle && (
+                    <p className="relative mt-2 line-clamp-1 pr-10 text-sm text-white/85">{post.title}</p>
+                  )}
                 </div>
 
                 <div className="p-5">
@@ -170,38 +183,39 @@ export function Department() {
                       <p className="truncate text-gray-700">{post.userName}</p>
                       <p>{formatDate(post.createdAt)}</p>
                     </div>
-                    <span className={`rounded-full px-3 py-1 text-xs ${visual.panel}`}>Detay</span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-xs ${visual.panel}`}>Detay</span>
+                      {post.userId !== user.id && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setReportingPost(post);
+                            setReportMessage('');
+                          }}
+                          className="rounded-lg bg-white p-2 text-gray-500 shadow-sm transition-colors hover:bg-amber-50 hover:text-amber-700"
+                          title="Paylaşımı raporla"
+                          aria-label="Paylaşımı raporla"
+                        >
+                          <Flag className="h-4 w-4" />
+                        </button>
+                      )}
+                      {post.userId === user.id && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteOwnPost(post.id);
+                          }}
+                          className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-red-600 shadow-sm transition-colors hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Sil
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {post.userId !== user.id && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setReportingPost(post);
-                      setReportMessage('');
-                    }}
-                    className="absolute right-4 bottom-4 rounded-lg bg-white/90 p-2 text-gray-500 shadow-sm transition-colors hover:bg-amber-50 hover:text-amber-700"
-                    title="Paylaşımı raporla"
-                    aria-label="Paylaşımı raporla"
-                  >
-                    <Flag className="h-4 w-4" />
-                  </button>
-                )}
-                {post.userId === user.id && (
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      deleteOwnPost(post.id);
-                    }}
-                    className="absolute right-4 bottom-4 inline-flex items-center gap-2 rounded-lg bg-white/90 px-3 py-2 text-red-600 shadow-sm transition-colors hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Sil
-                  </button>
-                )}
               </article>
               );
             })}
@@ -232,7 +246,10 @@ export function Department() {
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <h2 className="text-2xl leading-tight">{selectedPost.title}</h2>
+              <h2 className="text-2xl leading-tight">{getDisplayTitle(selectedPost)}</h2>
+              {getDisplayTitle(selectedPost) !== selectedPost.title && (
+                <p className="mt-2 text-white/85">{selectedPost.title}</p>
+              )}
             </div>
             <div className="space-y-5 overflow-y-auto p-6">
               <p className="whitespace-pre-wrap leading-7 text-gray-800">{selectedPost.content}</p>
