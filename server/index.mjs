@@ -1619,20 +1619,32 @@ app.get('/api/lost-found', asyncRoute(async (_req, res) => {
 
 app.post('/api/lost-found', asyncRoute(async (req, res) => {
   const { userId, title, type, category, location, date, description, contact, imageUrl } = req.body;
+  let ownerUserId = userId ? Number(userId) : null;
 
   if (!isInonuEmail(contact)) {
-    return res.status(400).json({ message: 'İletişim için @ogr.inonu.edu.tr e-postası kullanılmalıdır.' });
+    return res.status(400).json({ message: 'Iletisim icin @ogr.inonu.edu.tr e-postasi kullanilmalidir.' });
   }
 
   if (!title || !type || !description || !contact) {
-    return res.status(400).json({ message: 'Eşya adı, tür, açıklama ve iletişim e-postası zorunludur.' });
+    return res.status(400).json({ message: 'Esya adi, tur, aciklama ve iletisim e-postasi zorunludur.' });
+  }
+
+  if (!['lost', 'found'].includes(type)) {
+    return res.status(400).json({ message: 'Ilan turu kayip veya bulunan esya olmalidir.' });
+  }
+
+  if (ownerUserId) {
+    const userExists = await pool.query('SELECT id FROM users WHERE id = $1', [ownerUserId]);
+    if (userExists.rowCount === 0) {
+      ownerUserId = null;
+    }
   }
 
   const result = await pool.query(`
     INSERT INTO lost_found_items (user_id, title, item_type, category, location, item_date, description, contact_email, image_url)
     VALUES ($1, $2, $3, $4, $5, $6, $7, LOWER($8), $9)
     RETURNING id
-  `, [userId ? Number(userId) : null, title, type, category || null, location || null, date || null, description, contact, imageUrl || null]);
+  `, [ownerUserId, title, type, category || null, location || null, date || null, description, contact, imageUrl || null]);
 
   res.status(201).json({ id: result.rows[0].id });
 }));
