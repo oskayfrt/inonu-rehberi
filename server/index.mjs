@@ -65,7 +65,6 @@ function getDatabaseConfig() {
 
   return {
     connectionString: process.env.DATABASE_URL,
-    options: '-c search_path=public',
     ...(isLocalDatabase ? {} : { ssl: { rejectUnauthorized: false } }),
   };
 }
