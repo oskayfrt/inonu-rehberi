@@ -1184,6 +1184,17 @@ app.get('/api/faculties', asyncRoute(async (_req, res) => {
 }));
 
 app.get('/api/departments', asyncRoute(async (_req, res) => {
+  if (!['lost', 'found'].includes(type)) {
+    return res.status(400).json({ message: 'Ilan turu kayip veya bulunan esya olmalidir.' });
+  }
+
+  if (ownerUserId) {
+    const userExists = await pool.query('SELECT id FROM users WHERE id = $1', [ownerUserId]);
+    if (userExists.rowCount === 0) {
+      ownerUserId = null;
+    }
+  }
+
   const result = await pool.query(`
     SELECT d.id, d.name, d.faculty_id, f.name AS faculty_name
     FROM departments d
@@ -1263,6 +1274,27 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
   res.json({ user: mapUser(user) });
 }));
 
+app.get('/api/users/:id', asyncRoute(async (req, res) => {
+  const userId = Number(req.params.id);
+
+  if (!userId) {
+    return res.status(400).json({ message: 'Kullanici secimi zorunludur.' });
+  }
+
+  const result = await pool.query(`
+    SELECT u.id, u.name, u.surname, u.email, u.department_id, u.year, u.role, d.name AS department_name
+    FROM users u
+    LEFT JOIN departments d ON d.id = u.department_id
+    WHERE u.id = $1
+  `, [userId]);
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ message: 'Kullanici bulunamadi.' });
+  }
+
+  res.json({ user: mapUser(result.rows[0]) });
+}));
+
 app.patch('/api/users/:id', asyncRoute(async (req, res) => {
   const userId = Number(req.params.id);
   const { fullName } = req.body;
@@ -1326,10 +1358,15 @@ app.get('/api/posts', asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/posts', asyncRoute(async (req, res) => {
-  const { userId, departmentId, title, content, category, courseName } = req.body;
+  const { userId, departmentId, title, content, category } = req.body;
+  const courseName = String(req.body.courseName || req.body.course_name || req.body.course || '').trim();
 
   if (!userId || !departmentId || !title || !content || !category) {
     return res.status(400).json({ message: 'Paylaşım için tüm alanlar zorunludur.' });
+  }
+
+  if ((category === 'course-tip' || category === 'elective-review') && !courseName) {
+    return res.status(400).json({ message: 'Ders tavsiyesi veya secmeli ders yorumu icin ders adi zorunludur.' });
   }
 
   const userResult = await pool.query('SELECT department_id FROM users WHERE id = $1', [Number(userId)]);
@@ -1347,7 +1384,7 @@ app.post('/api/posts', asyncRoute(async (req, res) => {
     INSERT INTO posts (user_id, department_id, title, content, category, course_name, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'approved')
     RETURNING id, title, content, category, course_name, status, created_at
-  `, [Number(userId), userDepartmentId, title, content, category, String(courseName || '').trim() || null]);
+  `, [Number(userId), userDepartmentId, title, content, category, courseName || null]);
 
   res.status(201).json({ post: result.rows[0] });
 }));
@@ -1622,6 +1659,7 @@ app.get('/api/lost-found', asyncRoute(async (_req, res) => {
 
 app.post('/api/lost-found', asyncRoute(async (req, res) => {
   const { userId, title, type, category, location, date, description, contact, imageUrl } = req.body;
+  let ownerUserId = userId ? Number(userId) : null;
 
   if (!isInonuEmail(contact)) {
     return res.status(400).json({ message: 'İletişim için @ogr.inonu.edu.tr e-postası kullanılmalıdır.' });
@@ -1635,7 +1673,7 @@ app.post('/api/lost-found', asyncRoute(async (req, res) => {
     INSERT INTO lost_found_items (user_id, title, item_type, category, location, item_date, description, contact_email, image_url)
     VALUES ($1, $2, $3, $4, $5, $6, $7, LOWER($8), $9)
     RETURNING id
-  `, [userId ? Number(userId) : null, title, type, category || null, location || null, date || null, description, contact, imageUrl || null]);
+  `, [ownerUserId, title, type, category || null, location || null, date || null, description, contact, imageUrl || null]);
 
   res.status(201).json({ id: result.rows[0].id });
 }));
