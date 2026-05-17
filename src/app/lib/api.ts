@@ -46,10 +46,19 @@ export interface ApiPost {
   title: string;
   content: string;
   category: string;
+  courseName?: string;
+  course_name?: string;
   createdAt: string;
   departmentId: number;
   department: string;
   userName: string;
+}
+
+function normalizePost(post: ApiPost): ApiPost {
+  return {
+    ...post,
+    courseName: (post.courseName || post.course_name || '').trim(),
+  };
 }
 
 export interface ApiEvent {
@@ -208,9 +217,9 @@ export const api = {
     if (params.userId) search.set('userId', String(params.userId));
     if (params.scope) search.set('scope', params.scope);
     if (params.limit) search.set('limit', String(params.limit));
-    return request<ApiPost[]>(`/posts${search.size ? `?${search.toString()}` : ''}`);
+    return request<ApiPost[]>(`/posts${search.size ? `?${search.toString()}` : ''}`).then((posts) => posts.map(normalizePost));
   },
-  createPost: (body: { userId: number; departmentId: number; title: string; content: string; category: string }) =>
+  createPost: (body: { userId: number; departmentId: number; title: string; content: string; category: string; courseName?: string }) =>
     request<{ post: unknown }>('/posts', { method: 'POST', body: JSON.stringify(body) }),
   deletePost: (userId: number, postId: number) =>
     request<{ ok: boolean }>(`/posts/${postId}`, { method: 'DELETE', body: JSON.stringify({ userId }) }),
