@@ -1326,10 +1326,15 @@ app.get('/api/posts', asyncRoute(async (req, res) => {
 }));
 
 app.post('/api/posts', asyncRoute(async (req, res) => {
-  const { userId, departmentId, title, content, category, courseName } = req.body;
+  const { userId, departmentId, title, content, category } = req.body;
+  const courseName = String(req.body.courseName || req.body.course_name || req.body.course || '').trim();
 
   if (!userId || !departmentId || !title || !content || !category) {
     return res.status(400).json({ message: 'Paylaşım için tüm alanlar zorunludur.' });
+  }
+
+  if ((category === 'course-tip' || category === 'elective-review') && !courseName) {
+    return res.status(400).json({ message: 'Ders tavsiyesi veya secmeli ders yorumu icin ders adi zorunludur.' });
   }
 
   const userResult = await pool.query('SELECT department_id FROM users WHERE id = $1', [Number(userId)]);
@@ -1347,7 +1352,7 @@ app.post('/api/posts', asyncRoute(async (req, res) => {
     INSERT INTO posts (user_id, department_id, title, content, category, course_name, status)
     VALUES ($1, $2, $3, $4, $5, $6, 'approved')
     RETURNING id, title, content, category, course_name, status, created_at
-  `, [Number(userId), userDepartmentId, title, content, category, String(courseName || '').trim() || null]);
+  `, [Number(userId), userDepartmentId, title, content, category, courseName || null]);
 
   res.status(201).json({ post: result.rows[0] });
 }));

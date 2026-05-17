@@ -43,8 +43,13 @@ function isCoursePost(post: ApiPost) {
   return post.category === 'course-tip' || post.category === 'elective-review';
 }
 
+function getCourseName(post: ApiPost) {
+  return (post.courseName || post.course_name || '').trim();
+}
+
 function getDisplayTitle(post: ApiPost) {
-  return isCoursePost(post) && post.courseName ? post.courseName : post.title;
+  const courseName = getCourseName(post);
+  return isCoursePost(post) && courseName ? courseName : post.title;
 }
 
 export function Department() {
