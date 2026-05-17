@@ -1263,6 +1263,27 @@ app.post('/api/auth/login', asyncRoute(async (req, res) => {
   res.json({ user: mapUser(user) });
 }));
 
+app.get('/api/users/:id', asyncRoute(async (req, res) => {
+  const userId = Number(req.params.id);
+
+  if (!userId) {
+    return res.status(400).json({ message: 'Kullanici secimi zorunludur.' });
+  }
+
+  const result = await pool.query(`
+    SELECT u.id, u.name, u.surname, u.email, u.department_id, u.year, u.role, d.name AS department_name
+    FROM users u
+    LEFT JOIN departments d ON d.id = u.department_id
+    WHERE u.id = $1
+  `, [userId]);
+
+  if (result.rowCount === 0) {
+    return res.status(404).json({ message: 'Kullanici bulunamadi.' });
+  }
+
+  res.json({ user: mapUser(result.rows[0]) });
+}));
+
 app.patch('/api/users/:id', asyncRoute(async (req, res) => {
   const userId = Number(req.params.id);
   const { fullName } = req.body;

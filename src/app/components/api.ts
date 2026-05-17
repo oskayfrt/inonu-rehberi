@@ -209,6 +209,7 @@ export const api = {
     request<{ user: ApiUser }>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) =>
     request<{ user: ApiUser }>('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  user: (id: number) => request<{ user: ApiUser }>(`/users/${id}`),
   updateUser: (id: number, body: { fullName: string }) =>
     request<{ user: ApiUser }>(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   posts: (params: { departmentId?: number; userId?: number; scope?: 'department' | 'global'; limit?: number } = {}) => {
