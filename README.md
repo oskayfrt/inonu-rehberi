@@ -29,6 +29,4 @@ Bu projede React ile modern bir kullanici arayuzu, Node.js/Express ile REST API 
 - Node.js
 - Express
 - PostgreSQL
-- Vercel
 
-- https://inonu-rehberi.vercel.app/login buradan da siteye ulaşabilirsiniz.
